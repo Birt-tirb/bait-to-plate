@@ -403,9 +403,7 @@ do
         { 18244, 250, "Poached Sunscale Salmon", 13946, 13760, nil, true },
         { 18247, 275, "Baked Salmon", 13949, 13889, { { 3713, 1 } }, true },
         { 18245, 275, "Lobster Stew", 13947, 13888, { { 159, 1 } }, true },
-        { 18246, 275, "Mightfish Steak", 13948, 13893, { { 2692, 1 }, { 3713, 1 } } },
-        { 470370, 300, "Smoked Redgill", 232443, 13758 },
-        { 470359, 300, "Darkclaw Bisque", 232437, 13888, { { 227813, 1 } } },
+        { 18246, 275, "Mightfish Steak", 13948, 13893, { { 2692, 1 }, { 3713, 1 } }, true },
     }
     local ingredientNames = {
         [159] = "Refreshing Spring Water", [2678] = "Mild Spices",
@@ -422,14 +420,63 @@ do
         [13888] = "Darkclaw Lobster", [13889] = "Raw Whitescale Salmon",
         [13890] = "Raw Plated Armorfish", [13893] = "Large Raw Mightfish",
         [21071] = "Raw Sagefish", [21153] = "Raw Greater Sagefish",
-        [227813] = "Drinkable Stratholme Holy Water", [251524] = "Whimsyfin",
+        [251524] = "Whimsyfin",
     }
-    local recipeVendors = {
-        [7751] = "Tharynn Bouden (Goldshire) or Sewa Mistrunner (Thunder Bluff)",
-        [7753] = "Tharynn Bouden (Goldshire) or Naal Mistrunner (Thunder Bluff)",
-        [7755] = "Catherine Leland (Stormwind) or Naal Mistrunner (Thunder Bluff)",
-        [20916] = "Tansy Puddlefizz (Ironforge) or Shankys (Orgrimmar)",
-        [18241] = "Kelsey Yance (Booty Bay)",
+    local kelsey = { "Both factions: Kelsey Yance", "Old Port Authority, Booty Bay, Stranglethorn Vale (28.2, 74.4)" }
+    local gikkix = { "Both factions: Gikkix", "Steamwheedle Port, Tanaris (66.6, 22.1)" }
+    local feralas = {
+        "Alliance: Vivianna, Feathermoon Stronghold, Feralas",
+        "Horde: Sheendra Tallgrass, Camp Mojache, Feralas",
+    }
+    local recipeSources = {
+        [7751] = {
+            "Alliance: Tharynn Bouden, Goldshire, Elwynn Forest",
+            "Horde: Sewa Mistrunner, Thunder Bluff",
+        },
+        [7752] = {
+            "Alliance: Kriggon Talsone, Westfall (36.2, 90.1)",
+            "Horde: Zansoa, Sen'jin Village, Durotar",
+        },
+        [7753] = {
+            "Alliance: Tharynn Bouden, Goldshire, Elwynn Forest",
+            "Horde: Naal Mistrunner, Thunder Bluff",
+        },
+        [6415] = { "Alliance: Laird, Auberdine, Darkshore (36.8, 44.3)" },
+        [7754] = { "Alliance: Khara Deepwater, Thelsamar, Loch Modan (40.3, 39.3)" },
+        [7827] = {
+            "Alliance: Catherine Leland, Stormwind",
+            "Horde: Shankys, Orgrimmar",
+            "Both factions: Gritta Chumwater, Powderfuse Port, Riverglades (78.4, 55.0)",
+        },
+        [25704] = {
+            "Alliance: Erika Tate, Stormwind",
+            "Horde: Naal Mistrunner, Thunder Bluff, or Xen'to, Orgrimmar",
+        },
+        [8238] = { "Rare drop in The Barrens", "Examples: Witchwing Harpies and Venture Co. Peons" },
+        [1252566] = {
+            "Rare drop in Redridge Mountains",
+            "Examples: Greater Tarantulas, Redridge Thrashers, and Great Goretusks",
+        },
+        [7755] = {
+            "Alliance: Catherine Leland, Stormwind",
+            "Horde: Naal Mistrunner, Thunder Bluff",
+            "Both factions: Gritta Chumwater, Powderfuse Port, Riverglades (78.4, 55.0)",
+        },
+        [20916] = kelsey,
+        [7828] = kelsey,
+        [25954] = kelsey,
+        [1247741] = { "Reported source: Cooking trainer. Specific trainer unverified." },
+        [18239] = kelsey,
+        [18241] = kelsey,
+        [1319313] = { "World pickup: supply cart at Ariden's Camp, Deadwind Pass (52.4, 34.3)" },
+        [18238] = gikkix,
+        [18240] = gikkix,
+        [18242] = kelsey,
+        [18243] = gikkix,
+        [18244] = gikkix,
+        [18247] = feralas,
+        [18245] = feralas,
+        [18246] = feralas,
     }
 
     local function GetCookingSkill()
@@ -519,10 +566,12 @@ do
                 GameTooltip:AddDoubleLine(name, quantity, 1, 1, 1, 0.58, 0.88, 0.71)
             end
         end
-        local vendor = entry.known == false and not entry.hasScroll and recipeVendors[entry.id]
-        if vendor then
+        local sources = recipeSources[entry.id]
+        if sources then
             TooltipSection("Where to get the recipe")
-            GameTooltip:AddLine(vendor, 1, 1, 1, true)
+            for _, source in ipairs(sources) do
+                GameTooltip:AddLine(source, 1, 1, 1, true)
+            end
         end
         GameTooltip:Show()
     end

@@ -1,4 +1,4 @@
-Bait to Plate 0.8.5
+Bait to Plate 0.8.6
 World of Warcraft: Forever 1.60.1 (Interface 16001)
 
 Install
@@ -25,10 +25,11 @@ is saved across characters on this WoW account and starts at version
 0.5.0. Drag the window to move it. Click X or type /bankfishing stats
 to hide it while keeping the counter running.
 
-Cooking checks your skill, bags and known recipes for 27 fish and
+Cooking checks your skill, bags and known recipes for 25 fish and
 seafood dishes. Ready recipes and recipes using fish you already
 have appear first. Each recipe row shows one status. Hover for separate
 requirements and ingredient sections with In bags / Needed counts.
+Tooltips also show where to learn the recipe.
 Use Open Cooking once on each
 character to verify learned recipes when WoW has not reported them.
 Recipe checks are informational. Craft at the appropriate station

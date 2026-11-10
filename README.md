@@ -6,7 +6,7 @@ One-button fishing for WoW Forever, with catch tracking and a cooking guide that
 
 - Click once to cast, then click again after the splash to reel in. Both actions require manual input and use WoW's built-in controls.
 - Track session and all-time catches, with item icons and a ranked catch chart.
-- Check Cooking skill, known recipes, bag ingredients, and exact shortages for 27 seafood dishes.
+- Check Cooking skill, known recipes, bag ingredients, exact shortages, and recipe locations for 25 seafood dishes.
 - Move the fishing button, catch window, and minimap icon. The addon remembers their positions.
 
 ## Install
