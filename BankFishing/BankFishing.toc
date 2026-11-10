@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: Bait to Plate
+## Notes: Cast and reel in with separate clicks of one on-screen button.
+## Version: 0.8.3
+## SavedVariables: BankFishingDB
+
+BankFishing.lua

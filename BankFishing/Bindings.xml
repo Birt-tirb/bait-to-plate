@@ -1,0 +1,3 @@
+<Bindings>
+    <Binding name="CLICK BankFishingCastButton:LeftButton" category="ADDONS" runOnUp="true" />
+</Bindings>
