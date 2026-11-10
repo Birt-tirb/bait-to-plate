@@ -13,7 +13,7 @@ One-button fishing for WoW Forever, with catch tracking and a cooking guide that
 
 Download the addon ZIP from [Releases](https://github.com/Birt-tirb/bait-to-plate/releases) and extract the included `BankFishing` folder into `World of Warcraft/_forever_/Interface/AddOns/`. Enable **Bait to Plate** in the AddOns list. Use `/reload` after replacing an existing installation.
 
-Click the minimap icon to show or hide the fishing controls and journal. Right-drag it to move it. Type `/baittoplate` to open settings. The addon retains the `BankFishing` folder name so WoW can find existing catch history and preferences.
+Left-click the minimap icon to show or hide the fishing controls and journal. Right-click it to open settings, or right-drag it to move it. You can also type `/baittoplate` to open settings. The addon retains the `BankFishing` folder name so WoW can find existing catch history and preferences.
 
 ## License and CurseForge
 

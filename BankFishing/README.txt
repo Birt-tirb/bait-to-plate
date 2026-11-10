@@ -1,4 +1,4 @@
-Bait to Plate 0.8.4
+Bait to Plate 0.8.5
 World of Warcraft: Forever 1.60.1 (Interface 16001)
 
 Install
@@ -34,7 +34,8 @@ character to verify learned recipes when WoW has not reported them.
 Recipe checks are informational. Craft at the appropriate station
 using WoW's Cooking window.
 
-Click the fishing icon on the minimap to turn Bait to Plate off or on.
+Left-click the fishing icon on the minimap to turn Bait to Plate off
+or on. Right-click the icon to open settings.
 While off, the fishing button and stats window are hidden, and the
 addon's keybinding and catch tracking are paused.
 Right-drag the minimap icon to move it around the minimap. Both window

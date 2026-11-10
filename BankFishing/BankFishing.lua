@@ -873,7 +873,7 @@ end
 local minimapButton = CreateFrame("Button", "BankFishingMinimapButton", Minimap)
 minimapButton:SetSize(31, 31)
 minimapButton:SetFrameLevel(Minimap:GetFrameLevel() + 8)
-minimapButton:RegisterForClicks("LeftButtonUp")
+minimapButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 minimapButton:RegisterForDrag("RightButton")
 minimapButton:SetNormalTexture(logoTexture)
 local minimapIcon = minimapButton:GetNormalTexture()
@@ -917,7 +917,15 @@ local function UpdateMinimapDrag()
     end
 end
 
+local draggedMinimapButton = false
+minimapButton:SetScript("OnMouseDown", function(_, button)
+    if button == "RightButton" then
+        draggedMinimapButton = false
+    end
+end)
+
 minimapButton:SetScript("OnDragStart", function(self)
+    draggedMinimapButton = true
     GameTooltip:Hide()
     self:SetScript("OnUpdate", UpdateMinimapDrag)
 end)
@@ -947,7 +955,13 @@ function addon.RestoreUIState()
     SetFishingEnabled(uiState.enabled ~= false)
 end
 
-minimapButton:SetScript("OnClick", function()
+minimapButton:SetScript("OnClick", function(_, button)
+    if button == "RightButton" then
+        if not draggedMinimapButton then
+            addon.OpenSettings()
+        end
+        return
+    end
     if InCombatLockdown() then
         ShowFishingError("You can toggle the addon after combat.")
         return
@@ -962,7 +976,8 @@ end)
 minimapButton:SetScript("OnEnter", function(self)
     GameTooltip:SetOwner(self, "ANCHOR_LEFT")
     GameTooltip:AddLine(displayName)
-    GameTooltip:AddLine(fishingEnabled and "Click to turn off" or "Click to turn on", 1, 1, 1)
+    GameTooltip:AddLine(fishingEnabled and "Left-click to hide" or "Left-click to show", 1, 1, 1)
+    GameTooltip:AddLine("Right-click for settings", 1, 1, 1)
     GameTooltip:AddLine("Right-drag to move", 1, 1, 1)
     GameTooltip:Show()
 end)
@@ -1051,6 +1066,9 @@ end)
 
 local category = Settings.RegisterCanvasLayoutCategory(panel, displayName)
 Settings.RegisterAddOnCategory(category)
+function addon.OpenSettings()
+    Settings.OpenToCategory(category:GetID())
+end
 SLASH_BANKFISHING1 = "/bankfishing"
 SLASH_BANKFISHING2 = "/reelandrecord"
 SLASH_BANKFISHING3 = "/baittoplate"
@@ -1063,5 +1081,5 @@ SlashCmdList.BANKFISHING = function(message)
         addon.ToggleStats()
         return
     end
-    Settings.OpenToCategory(category:GetID())
+    addon.OpenSettings()
 end
