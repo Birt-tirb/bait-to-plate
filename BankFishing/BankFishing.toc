@@ -1,7 +1,8 @@
 ## Interface: 16001
 ## Title: Bait to Plate
-## Notes: Cast and reel in with separate clicks of one on-screen button.
-## Version: 0.8.3
+## Notes: One-button fishing, catch tracking, and a cooking guide that checks your skill and bag contents.
+## IconTexture: Interface\AddOns\BankFishing\Logo.tga
+## Version: 0.8.4
 ## SavedVariables: BankFishingDB
 
 BankFishing.lua

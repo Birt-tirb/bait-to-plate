@@ -1,5 +1,6 @@
 local addonName, addon = ...
 local displayName = "Bait to Plate"
+local logoTexture = "Interface\\AddOns\\BankFishing\\Logo.tga"
 local binding = "CLICK BankFishingCastButton:LeftButton"
 addon.binding = binding
 local fishingSpellID = 7620
@@ -318,7 +319,7 @@ do
         return section
     end
 
-    MakeIcon(stats, 15, -13, 35, "Interface\\Icons\\Trade_Fishing")
+    MakeIcon(stats, 15, -13, 35, logoTexture)
     MakeLine(stats, "GameFontNormalLarge", 59, -13, 229):SetText(displayName)
     local subtitle = MakeLine(stats, "GameFontHighlightSmall", 59, -35, 225)
     subtitle:SetTextColor(0.65, 0.80, 0.81)
@@ -874,7 +875,7 @@ minimapButton:SetSize(31, 31)
 minimapButton:SetFrameLevel(Minimap:GetFrameLevel() + 8)
 minimapButton:RegisterForClicks("LeftButtonUp")
 minimapButton:RegisterForDrag("RightButton")
-minimapButton:SetNormalTexture("Interface\\Icons\\Trade_Fishing")
+minimapButton:SetNormalTexture(logoTexture)
 local minimapIcon = minimapButton:GetNormalTexture()
 minimapIcon:ClearAllPoints()
 minimapIcon:SetPoint("CENTER")

@@ -1,6 +1,8 @@
 # Bait to Plate
 
-A free World of Warcraft: Forever addon for fishing, catch tracking, and cooking.
+<img src="Bait-to-Plate-Logo.png" alt="Bait to Plate logo, a golden fish and hook on an enamel plate" width="112">
+
+One-button fishing for WoW Forever, with catch tracking and a cooking guide that checks your skill and bag contents.
 
 - Click once to cast, then click again after the splash to reel in. Both actions require manual input and use WoW's built-in controls.
 - Track session and all-time catches, with item icons and a ranked catch chart.
@@ -15,8 +17,8 @@ Click the minimap icon to show or hide the fishing controls and journal. Right-d
 
 ## License and CurseForge
 
-The addon source is available under the [Zero-Clause BSD license](LICENSE) (SPDX: `0BSD`). Anyone may use, modify, fork, or redistribute it for any purpose, without an attribution requirement.
+The addon source and bundled logo are available under the [Zero-Clause BSD license](LICENSE) (SPDX: `0BSD`). Anyone may use, modify, fork, or redistribute them for any purpose, without an attribution requirement.
 
 For a CurseForge listing, select **Zero-Clause BSD (0BSD)** if listed. Otherwise select **Custom** and paste the contents of [LICENSE](LICENSE). Use the same license on both sites. The release ZIP includes a copy of the license and contains the addon folder ready to upload for the **WoW Forever** flavor.
 
-The license covers the addon source. WoW artwork is referenced from the installed game client and belongs to Blizzard.
+Use [Bait-to-Plate-Logo.png](Bait-to-Plate-Logo.png) as the CurseForge project logo. WoW artwork referenced from the installed game client belongs to Blizzard.

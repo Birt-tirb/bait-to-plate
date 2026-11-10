@@ -1,4 +1,4 @@
-Bait to Plate 0.8.3
+Bait to Plate 0.8.4
 World of Warcraft: Forever 1.60.1 (Interface 16001)
 
 Install
