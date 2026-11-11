@@ -1,4 +1,4 @@
-Bait to Plate 0.8.6
+Bait to Plate 0.9.2
 World of Warcraft: Forever 1.60.1 (Interface 16001)
 
 Install
@@ -16,6 +16,16 @@ Right-drag the button to move it. Type /baittoplate button to hide
 or show it for the current session. If you prefer a key, assign
 Bait to Plate: Cast / Reel In under Options > Keybindings > AddOns.
 The existing /bankfishing and /reelandrecord commands still work.
+
+The lure icon beside Cast Fishing shows the selected lure's bag count
+and the remaining time on your equipped pole. Right-click to choose
+a lure, then left-click to apply it. Let an active lure expire before
+applying another.
+
+The campfire icon shows how many of the selected camp item are in
+your bags. Right-click to choose a campfire kit, Fish Bowl, Fishing
+Rack, or Fishing Hut. Left-click to place it. Fishing features
+require a nearby campfire.
 
 The catch window has Session, All-Time and Cooking tabs. The first
 two show totals, item artwork for first and latest catches, and a

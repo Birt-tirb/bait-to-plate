@@ -9,6 +9,9 @@ One-button fishing for WoW Forever, with catch tracking and a cooking guide that
 - Check Cooking skill, known recipes, bag ingredients, exact shortages, and recipe locations for 25 seafood dishes.
 - Move the fishing button, catch window, and minimap icon. The addon remembers their positions.
 
+- Choose and apply fishing lures with a bag count and time remaining on your pole.
+- Place campfire kits, Fish Bowls, Fishing Racks, and Fishing Huts from the camp menu.
+
 ## Install
 
 Download the addon ZIP from [Releases](https://github.com/Birt-tirb/bait-to-plate/releases) and extract the included `BankFishing` folder into `World of Warcraft/_forever_/Interface/AddOns/`. Enable **Bait to Plate** in the AddOns list. Use `/reload` after replacing an existing installation.

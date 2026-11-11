@@ -1132,3 +1132,235 @@ SlashCmdList.BANKFISHING = function(message)
     end
     addon.OpenSettings()
 end
+
+-- Lure control
+do
+    local lures = {
+        { id = 6529, name = "Shiny Bauble" },
+        { id = 268880, name = '"Secret" Bait' },
+        { id = 6530, name = "Nightcrawlers" },
+        { id = 6811, name = "Aquadynamic Fish Lens" },
+        { id = 6532, name = "Bright Baubles" },
+        { id = 7307, name = "Flesh Eating Worm" },
+        { id = 6533, name = "Aquadynamic Fish Attractor" },
+    }
+    local mainHandSlot = 16
+    local lureButton = CreateFrame("Button", "BankFishingLureButton", fishingButton, "SecureActionButtonTemplate")
+    lureButton:SetPoint("LEFT", fishingButton, "RIGHT", 6, 0)
+    lureButton:SetSize(29, 29)
+    lureButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    lureButton:SetAttribute("useOnKeyDown", false)
+    lureButton:SetNormalTexture(134400)
+    lureButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+
+    local countText = lureButton:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    countText:SetPoint("BOTTOMRIGHT", -2, 1)
+    local timerText = lureButton:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    timerText:SetPoint("TOP", lureButton, "BOTTOM", 0, -2)
+
+    local function SelectedItem(items, setting)
+        local firstInBags
+        for _, item in ipairs(items) do
+            if uiState and uiState[setting] == item.id then
+                return item
+            end
+            if not firstInBags and C_Item.GetItemCount(item.id) > 0 then
+                firstInBags = item
+            end
+        end
+        return firstInBags or items[1]
+    end
+
+    local function ShowItemMenu(button, title, items, setting, refresh)
+        MenuUtil.CreateContextMenu(button, function(_, menu)
+            menu:CreateTitle(title)
+            for _, item in ipairs(items) do
+                local name = C_Item.GetItemNameByID(item.id) or item.name
+                menu:CreateRadio(("%s (%d)"):format(name, C_Item.GetItemCount(item.id)), function(id)
+                    return SelectedItem(items, setting).id == id
+                end, function(id)
+                    if uiState then
+                        uiState[setting] = id
+                        refresh()
+                    end
+                end, item.id)
+            end
+        end)
+    end
+
+    local function FishingPoleEquipped()
+        local itemID = GetInventoryItemID("player", mainHandSlot)
+        if not itemID then
+            return false
+        end
+        local _, _, _, _, _, itemClass, subclass = C_Item.GetItemInfoInstant(itemID)
+        return itemClass == Enum.ItemClass.Weapon and subclass == Enum.ItemWeaponSubclass.Fishingpole
+    end
+
+    local function PoleLureTime()
+        if FishingPoleEquipped() then
+            local enchants = C_Item.GetWeaponEnchantInfo(Enum.WeaponSlot.MainHand)
+            for _, enchant in ipairs(enchants or {}) do
+                if enchant.hasEnchant and enchant.enchantType == Enum.ItemEnchantType.Temporary
+                    and enchant.timeLeft then
+                    return math.ceil(enchant.timeLeft / 1000)
+                end
+            end
+        end
+        return 0
+    end
+
+    local function RefreshLure()
+        local lure = SelectedItem(lures, "lureID")
+        local seconds = PoleLureTime()
+        local texture = lureButton:GetNormalTexture()
+        texture:SetTexture(C_Item.GetItemIconByID(lure.id) or 134400)
+        texture:SetDesaturated(seconds == 0)
+        countText:SetText(tostring(C_Item.GetItemCount(lure.id)))
+        timerText:SetText(seconds > 0 and ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60) or "--")
+    end
+
+    lureButton:SetScript("PreClick", function(self, button)
+        if button ~= "LeftButton" or InCombatLockdown() then
+            return
+        end
+        self:SetAttribute("type1", nil)
+        if not FishingPoleEquipped() then
+            ShowFishingError("Equip a fishing pole first.")
+            return
+        end
+        if IsFishing() then
+            ShowFishingError("Reel in before applying a lure.")
+            return
+        end
+        if PoleLureTime() > 0 then
+            ShowFishingError("Your pole already has an active lure.")
+            return
+        end
+        local lure = SelectedItem(lures, "lureID")
+        if C_Item.GetItemCount(lure.id) == 0 then
+            ShowFishingError("No " .. lure.name .. " in your bags. Right-click to choose another lure.")
+            return
+        end
+        self:SetAttribute("macrotext1", ("/stopmacro [combat]\n/use item:%d\n/use %d"):format(lure.id, mainHandSlot))
+        self:SetAttribute("type1", "macro")
+    end)
+
+    lureButton:SetScript("PostClick", function(self, button)
+        if button == "LeftButton" then
+            if not InCombatLockdown() then
+                self:SetAttribute("type1", nil)
+            end
+        elseif button == "RightButton" then
+            ShowItemMenu(self, "Choose a fishing lure", lures, "lureID", RefreshLure)
+        end
+    end)
+
+    lureButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        local lure = SelectedItem(lures, "lureID")
+        GameTooltip:SetItemByID(lure.id)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Left-click to apply the selected lure.", 1, 1, 1)
+        GameTooltip:AddLine("Right-click to choose a lure.", 1, 1, 1)
+        GameTooltip:AddLine("The timer shows the lure on your equipped pole.", 0.7, 0.85, 0.83)
+        GameTooltip:Show()
+    end)
+    lureButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
+    local refreshElapsed = 0
+    lureButton:SetScript("OnUpdate", function(_, elapsed)
+        refreshElapsed = refreshElapsed + elapsed
+        if refreshElapsed >= 1 then
+            refreshElapsed = 0
+            RefreshLure()
+        end
+    end)
+    lureButton:SetScript("OnShow", RefreshLure)
+    lureButton:RegisterEvent("PLAYER_LOGIN")
+    lureButton:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+    lureButton:RegisterEvent("BAG_UPDATE_DELAYED")
+    lureButton:SetScript("OnEvent", function(self)
+        if self:IsVisible() then
+            RefreshLure()
+        end
+    end)
+
+    local campItems = {
+        { id = 279981, name = "Basic Campfire Kit" },
+        { id = 279961, name = "Journeyman Campfire Kit" },
+        { id = 279974, name = "Expert Campfire Kit" },
+        { id = 279967, name = "Fish Bowl" },
+        { id = 279965, name = "Fishing Rack" },
+        { id = 279966, name = "Fishing Hut" },
+    }
+    local campfireButton = CreateFrame("Button", "BankFishingCampfireButton", fishingButton, "SecureActionButtonTemplate")
+    campfireButton:SetPoint("LEFT", lureButton, "RIGHT", 6, 0)
+    campfireButton:SetSize(29, 29)
+    campfireButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    campfireButton:SetAttribute("useOnKeyDown", false)
+    campfireButton:SetNormalTexture(135805)
+    campfireButton:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+
+    local kitCount = campfireButton:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    kitCount:SetPoint("BOTTOMRIGHT", -2, 1)
+
+    local function RefreshCampfire()
+        local item = SelectedItem(campItems, "campfireKitID")
+        local count = C_Item.GetItemCount(item.id)
+        local texture = campfireButton:GetNormalTexture()
+        texture:SetTexture(C_Item.GetItemIconByID(item.id) or 135805)
+        texture:SetDesaturated(count == 0)
+        kitCount:SetText(tostring(count))
+    end
+
+    campfireButton:SetScript("PreClick", function(self, button)
+        if button ~= "LeftButton" or InCombatLockdown() then
+            return
+        end
+        self:SetAttribute("type1", nil)
+        if IsFishing() then
+            ShowFishingError("Reel in before placing a camp item.")
+            return
+        end
+        local item = SelectedItem(campItems, "campfireKitID")
+        if C_Item.GetItemCount(item.id) == 0 then
+            ShowFishingError("No " .. item.name .. " in your bags.")
+            return
+        end
+        self:SetAttribute("macrotext1", ("/stopmacro [combat]\n/use item:%d"):format(item.id))
+        self:SetAttribute("type1", "macro")
+    end)
+
+    campfireButton:SetScript("PostClick", function(self, button)
+        if button == "LeftButton" then
+            if not InCombatLockdown() then
+                self:SetAttribute("type1", nil)
+            end
+        elseif button == "RightButton" then
+            ShowItemMenu(self, "Choose a camp item", campItems, "campfireKitID", RefreshCampfire)
+        end
+    end)
+
+    campfireButton:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetItemByID(SelectedItem(campItems, "campfireKitID").id)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Left-click to place the selected item.", 1, 1, 1)
+        GameTooltip:AddLine("Right-click to choose a camp item.", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    campfireButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    campfireButton:SetScript("OnShow", RefreshCampfire)
+    campfireButton:RegisterEvent("PLAYER_LOGIN")
+    campfireButton:RegisterEvent("BAG_UPDATE_DELAYED")
+    campfireButton:SetScript("OnEvent", function(self)
+        if self:IsVisible() then
+            RefreshCampfire()
+        end
+    end)
+end
