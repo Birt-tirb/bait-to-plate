@@ -4,6 +4,7 @@ local logoTexture = "Interface\\AddOns\\BankFishing\\Logo.tga"
 local binding = "CLICK BankFishingCastButton:LeftButton"
 addon.binding = binding
 local fishingSpellID = 7620
+local mainHandSlot = 16
 _G["BINDING_NAME_" .. binding] = displayName .. ": Cast / Reel In"
 
 local castButton = CreateFrame("Button", "BankFishingCastButton", UIParent, "SecureActionButtonTemplate")
@@ -19,6 +20,7 @@ local fishingName
 local interactKeys = {}
 local waitingForRelease = false
 local fishingEnabled = true
+local fishingButtonHidden = false
 local uiState
 local restorePending = false
 
@@ -64,6 +66,15 @@ local function IsFishing()
     return not issecretvalue(name) and name ~= nil and name == fishingName
 end
 
+local function FishingPoleEquipped()
+    local itemID = GetInventoryItemID("player", mainHandSlot)
+    if not itemID then
+        return false
+    end
+    local _, _, _, _, _, itemClass, subclass = C_Item.GetItemInfoInstant(itemID)
+    return itemClass == Enum.ItemClass.Weapon and subclass == Enum.ItemWeaponSubclass.Fishingpole
+end
+
 local fishingButton = CreateFrame("Button", "BankFishingScreenButton", UIParent,
     "SecureActionButtonTemplate,UIPanelButtonTemplate")
 fishingButton:SetPoint("CENTER", UIParent, "CENTER", 215, -130)
@@ -83,6 +94,11 @@ end)
 fishingButton:SetScript("OnDragStop", function(self)
     SavePosition(self, "fishingButton")
 end)
+fishingButton:Hide()
+
+local function RefreshFishingButton()
+    fishingButton:SetShown(fishingEnabled and not fishingButtonHidden and FishingPoleEquipped())
+end
 
 local function GetNativeInteractName()
     local frame = GamepadMainActionBarFrame
@@ -164,7 +180,8 @@ end)
 
 function addon.ToggleFishingButton()
     if fishingEnabled and not InCombatLockdown() then
-        fishingButton:SetShown(not fishingButton:IsShown())
+        fishingButtonHidden = not fishingButtonHidden
+        RefreshFishingButton()
     end
 end
 
@@ -215,7 +232,7 @@ local function WaitForRelease()
     end)
 end
 
-events:SetScript("OnEvent", function(_, event, ...)
+events:SetScript("OnEvent", function(_, event, slot)
     if event == "PLAYER_LOGOUT" or event == "PLAYER_REGEN_DISABLED" then
         UpdateInteractRange(false)
         return
@@ -227,6 +244,17 @@ events:SetScript("OnEvent", function(_, event, ...)
 
     if InCombatLockdown() then
         return
+    end
+
+    if event == "PLAYER_EQUIPMENT_CHANGED" then
+        if slot == mainHandSlot then
+            RefreshFishingButton()
+        end
+        return
+    end
+
+    if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_REGEN_ENABLED" then
+        RefreshFishingButton()
     end
 
     if event == "PLAYER_LOGIN" or event == "SPELLS_CHANGED" or event == "PLAYER_REGEN_ENABLED" then
@@ -251,6 +279,7 @@ events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("PLAYER_LOGOUT")
 events:RegisterEvent("PLAYER_REGEN_DISABLED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
+events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 events:RegisterEvent("SPELLS_CHANGED")
 events:RegisterEvent("UPDATE_BINDINGS")
 events:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
@@ -989,7 +1018,8 @@ local function SetFishingEnabled(enabled)
     waitingForRelease = false
     events:SetScript("OnUpdate", nil)
     castButton:SetAttribute("type", fishingEnabled and "spell" or nil)
-    fishingButton:SetShown(fishingEnabled)
+    fishingButtonHidden = false
+    RefreshFishingButton()
     addon.ShowCatchStats(fishingEnabled)
     minimapIcon:SetDesaturated(not fishingEnabled)
     SyncBindings()
@@ -1144,7 +1174,6 @@ do
         { id = 7307, name = "Flesh Eating Worm" },
         { id = 6533, name = "Aquadynamic Fish Attractor" },
     }
-    local mainHandSlot = 16
     local lureButton = CreateFrame("Button", "BankFishingLureButton", fishingButton, "SecureActionButtonTemplate")
     lureButton:SetPoint("LEFT", fishingButton, "RIGHT", 6, 0)
     lureButton:SetSize(29, 29)
@@ -1186,15 +1215,6 @@ do
                 end, item.id)
             end
         end)
-    end
-
-    local function FishingPoleEquipped()
-        local itemID = GetInventoryItemID("player", mainHandSlot)
-        if not itemID then
-            return false
-        end
-        local _, _, _, _, _, itemClass, subclass = C_Item.GetItemInfoInstant(itemID)
-        return itemClass == Enum.ItemClass.Weapon and subclass == Enum.ItemWeaponSubclass.Fishingpole
     end
 
     local function PoleLureTime()

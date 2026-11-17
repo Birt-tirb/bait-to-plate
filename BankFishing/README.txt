@@ -1,4 +1,4 @@
-Bait to Plate 0.9.2
+Bait to Plate 0.9.3
 World of Warcraft: Forever 1.60.1 (Interface 16001)
 
 Install
@@ -12,6 +12,7 @@ Install
 4. Learn Fishing, equip your pole and face fishable water. Click
    Cast Fishing, wait for the splash, then click Reel In.
 
+The fishing controls appear when you equip a fishing pole.
 Right-drag the button to move it. Type /baittoplate button to hide
 or show it for the current session. If you prefer a key, assign
 Bait to Plate: Cast / Reel In under Options > Keybindings > AddOns.
