@@ -1,4 +1,4 @@
-Bait to Plate 0.9.3
+Bait to Plate 0.9.4
 World of Warcraft: Forever 1.60.1 (Interface 16001)
 
 Install
@@ -21,7 +21,7 @@ The existing /bankfishing and /reelandrecord commands still work.
 The lure icon beside Cast Fishing shows the selected lure's bag count
 and the remaining time on your equipped pole. Right-click to choose
 a lure, then left-click to apply it. Let an active lure expire before
-applying another.
+applying another. Camper's Lure is included in the lure menu.
 
 The campfire icon shows how many of the selected camp item are in
 your bags. Right-click to choose a campfire kit, Fish Bowl, Fishing

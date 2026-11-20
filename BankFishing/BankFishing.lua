@@ -1170,6 +1170,7 @@ do
         { id = 268880, name = '"Secret" Bait' },
         { id = 6530, name = "Nightcrawlers" },
         { id = 6811, name = "Aquadynamic Fish Lens" },
+        { id = 291005, name = "Camper's Lure" },
         { id = 6532, name = "Bright Baubles" },
         { id = 7307, name = "Flesh Eating Worm" },
         { id = 6533, name = "Aquadynamic Fish Attractor" },

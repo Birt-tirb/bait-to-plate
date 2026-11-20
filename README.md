@@ -9,7 +9,7 @@ One-button fishing for WoW Forever, with catch tracking and a cooking guide that
 - Check Cooking skill, known recipes, bag ingredients, exact shortages, and recipe locations for 25 seafood dishes.
 - Move the fishing button, catch window, and minimap icon. The addon remembers their positions.
 
-- Choose and apply fishing lures with a bag count and time remaining on your pole.
+- Choose and apply fishing lures, including Camper's Lure, with a bag count and time remaining on your pole.
 - Place campfire kits, Fish Bowls, Fishing Racks, and Fishing Huts from the camp menu.
 
 ## Install
