@@ -46,7 +46,7 @@ Your previous sound settings return when fishing ends or is interrupted, combat 
 - **Right-drag the fishing button** or **drag the journal** to reposition them. Positions and the on/off preference are saved.
 - Extract the **BankFishing** folder into your client's **Interface/AddOns** folder, enable Bait to Plate, then `/reload` after updates.
 
-## v0.9.8 Beta compatibility
+## v0.9.8 compatibility
 
 | Client | Version |
 | --- | --- |
@@ -57,4 +57,4 @@ Your previous sound settings return when fishing ends or is interrupted, combat 
 | Mists of Pandaria Classic | 5.5.4 |
 | Wrath Titan Reforged | 3.80.2 |
 
-The settings UI was checked in-game on Forever. Other client ports passed simulated API checks and still need in-game testing. This is a **Beta compatibility release**.
+The settings UI was checked in-game on Forever. Other client ports passed simulated API checks and still need in-game testing.

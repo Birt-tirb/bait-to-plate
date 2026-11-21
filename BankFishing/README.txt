@@ -1,5 +1,5 @@
 Bait to Plate 0.9.8
-Beta compatibility preview for current official WoW clients:
+Release for current official WoW clients:
 Forever 1.60.1, Retail 12.1.5, Classic Era 1.15.9, TBC Anniversary 2.5.6,
 Mists of Pandaria Classic 5.5.4, and Wrath Titan Reforged 3.80.2.
 The settings UI was checked in-game on Forever. Other client ports passed
