@@ -1,5 +1,8 @@
 local addonName, addon = ...
 local displayName = "Bait to Plate"
+local compat = addon.Compat
+local issecretvalue = compat.IsSecret
+local C_Item = compat.Item
 local logoTexture = "Interface\\AddOns\\BankFishing\\Logo.tga"
 local binding = "CLICK BankFishingCastButton:LeftButton"
 addon.binding = binding
@@ -67,12 +70,7 @@ local function IsFishing()
 end
 
 local function FishingPoleEquipped()
-    local itemID = GetInventoryItemID("player", mainHandSlot)
-    if not itemID then
-        return false
-    end
-    local _, _, _, _, _, itemClass, subclass = C_Item.GetItemInfoInstant(itemID)
-    return itemClass == Enum.ItemClass.Weapon and subclass == Enum.ItemWeaponSubclass.Fishingpole
+    return compat.FishingPoleEquipped()
 end
 
 local fishingButton = CreateFrame("Button", "BankFishingScreenButton", UIParent,
@@ -97,45 +95,24 @@ end)
 fishingButton:Hide()
 
 local function RefreshFishingButton()
-    fishingButton:SetShown(fishingEnabled and not fishingButtonHidden and FishingPoleEquipped())
+    local poleEquipped = compat.CanShowFishingControls()
+    if not InCombatLockdown() then
+        fishingButton:SetShown(fishingEnabled and not fishingButtonHidden and poleEquipped)
+    end
+    addon.SetPoolPinsEnabled(compat.supportsPoolData and fishingEnabled and uiState ~= nil and uiState.enabled ~= false
+        and uiState.showFishingPools ~= false and poleEquipped)
 end
 
 local function GetNativeInteractName()
-    local frame = GamepadMainActionBarFrame
-    local bars = frame and frame.PageUnit and frame.PageUnit.actionBars
-    local right = bars and bars.topBar and bars.topBar.Right
-    local button = right and right.ActionButton1
-    local aspect = Enum.ForbiddenAspect and Enum.ForbiddenAspect.ScriptedInput
-    if not button or button:IsForbidden() or not aspect
-        or not button.HasAccessConstraints or button:HasAccessConstraints() ~= false
-        or not button.HasAnyForbiddenAspects or button:HasAnyForbiddenAspects(aspect) ~= false
-        or not button:GetScript("OnClick") then
-        return
-    end
-
-    local name = button:GetName()
-    if name and name:match("^[%w_]+$") and _G[name] == button then
-        return name
-    end
+    return compat.GetNativeInteractName()
 end
 
 local function CanReachBobber()
-    local guid = UnitGUID("softinteract")
-    if issecretvalue(guid) or not guid
-        or guid:match("^GameObject%-%d+%-%d+%-%d+%-%d+%-(%d+)%-") ~= "35591" then
-        return false
-    end
-    local inRange = UnitIsInInteractRange("softinteract")
-    return not issecretvalue(inRange) and inRange == true
+    return compat.CanReachBobber()
 end
 
 local function EnableInteractKey()
-    local setting = Settings.GetSetting("PROXY_ENABLE_INTERACT")
-    if setting and not setting:GetValue() then
-        -- Use the same setting as the checkbox in WoW's Controls menu.
-        setting:SetValue(true, true)
-    end
-    return setting and setting:GetValue()
+    return compat.EnableInteractKey()
 end
 
 local function ShowFishingError(message)
@@ -164,10 +141,10 @@ fishingButton:SetScript("PreClick", function(self)
 
     local interactName = GetNativeInteractName()
     if not interactName then
-        ShowFishingError("WoW's Interact button is unavailable. Right-click the bobber.")
+        ShowFishingError("Press your bound Cast / Reel In key or right-click the bobber.")
         return
     end
-    if not CanReachBobber() or C_PetInfo.IsPetOrderMoveToPending() then
+    if not CanReachBobber() or (C_PetInfo and C_PetInfo.IsPetOrderMoveToPending and C_PetInfo.IsPetOrderMoveToPending()) then
         ShowFishingError("No in-range bobber selected. Face it or right-click it to reel in.")
         return
     end
@@ -185,29 +162,20 @@ function addon.ToggleFishingButton()
     end
 end
 
-local interactRangeCVar = "SoftTargetInteractRange"
-local temporaryRange
 local function UpdateInteractRange(isFishing)
-    local range = tonumber(C_CVar.GetCVar(interactRangeCVar))
-    if isFishing then
-        if not temporaryRange and range and range < 60
-            and pcall(C_CVar.SetTempCVar, interactRangeCVar, "60") then
-            temporaryRange = tonumber(C_CVar.GetCVar(interactRangeCVar))
-        end
-    elseif temporaryRange then
-        local applied = temporaryRange
-        temporaryRange = nil
-        if range == applied then
-            C_CVar.RemoveTempCVar(interactRangeCVar)
-        end
-    end
+    compat.UpdateInteractRange(isFishing)
 end
 
 local function SyncBindings()
+    local isFishing = fishingEnabled and IsFishing()
+    addon.UpdateFishingAudio(isFishing)
     if not InCombatLockdown() then
-        local isFishing = fishingEnabled and IsFishing()
+        if isFishing then
+            EnableInteractKey()
+        end
         UpdateInteractRange(isFishing)
-        fishingButton:SetText(isFishing and "Reel In" or "Cast Fishing")
+        local reelLabel = compat.isForever and "Reel In" or "Use bound key"
+        fishingButton:SetText(isFishing and reelLabel or "Cast Fishing")
         UpdateInteractBindings(isFishing)
     end
 end
@@ -242,23 +210,24 @@ events:SetScript("OnEvent", function(_, event, slot)
         return
     end
 
-    if InCombatLockdown() then
-        return
-    end
-
     if event == "PLAYER_EQUIPMENT_CHANGED" then
-        if slot == mainHandSlot then
+        if slot == mainHandSlot or compat.isRetail then
             RefreshFishingButton()
         end
         return
     end
 
-    if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_REGEN_ENABLED" then
+    if InCombatLockdown() then
+        return
+    end
+
+    if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_REGEN_ENABLED"
+        or event == "SPELLS_CHANGED" or event == "SKILL_LINES_CHANGED" then
         RefreshFishingButton()
     end
 
     if event == "PLAYER_LOGIN" or event == "SPELLS_CHANGED" or event == "PLAYER_REGEN_ENABLED" then
-        local name = C_Spell.GetSpellName(fishingSpellID)
+        local name = compat.GetSpellName(fishingSpellID)
         if name and name ~= fishingName then
             fishingName = name
             castButton:SetAttribute("spell", name)
@@ -281,6 +250,7 @@ events:RegisterEvent("PLAYER_REGEN_DISABLED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 events:RegisterEvent("SPELLS_CHANGED")
+events:RegisterEvent("SKILL_LINES_CHANGED")
 events:RegisterEvent("UPDATE_BINDINGS")
 events:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
 events:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", "player")
@@ -289,6 +259,7 @@ events:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
 -- Catch stats window
 do
     local stats = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+    stats:Hide()
     stats:SetPoint("CENTER", UIParent, "CENTER", 425, -145)
     stats:SetSize(332, 380)
     stats:SetFrameStrata("MEDIUM")
@@ -405,117 +376,12 @@ do
     local cookingHint = MakeLine(cooking, "GameFontHighlightSmall", 15, -120, 302)
     cookingHint:SetWordWrap(true)
 
-    -- Spell ID, minimum skill, name, recipe item, primary catch, and extra reagents.
-    -- Reagents are item ID followed by the quantity required per craft.
-    local recipes = {
-        { 7751, 1, "Brilliant Smallfish", 6325, 6291 },
-        { 7752, 1, "Slitherskin Mackerel", 6326, 6303 },
-        { 7753, 50, "Longjaw Mud Snapper", 6328, 6289 },
-        { 6415, 50, "Fillet of Frenzy", 5485, 5468, { { 2678, 1 } } },
-        { 7754, 50, "Loch Frenzy Delight", 6329, 6317, { { 2678, 1 } } },
-        { 7827, 50, "Rainbow Fin Albacore", 6368, 6361 },
-        { 25704, 80, "Smoked Sagefish", 21099, 21071, { { 2678, 1 } } },
-        { 8238, 85, "Savory Deviate Delight", 6661, 6522, { { 2678, 1 } } },
-        { 1252566, 85, "Savory Whimsyfin Delight", 251526, 251524, { { 2678, 1 } } },
-        { 7755, 100, "Bristle Whisker Catfish", 6330, 6308 },
-        { 20916, 175, "Mithril Headed Trout", 17062, 8365 },
-        { 7828, 175, "Rockscale Cod", 6369, 6362 },
-        { 25954, 175, "Sagefish Delight", 21219, 21153, { { 2692, 1 } } },
-        { 1247741, 210, "Spinefin Halibut", nil, 8959 },
-        { 18239, 225, "Cooked Glossy Mightfish", 13940, 13754, { { 3713, 1 } } },
-        { 18241, 225, "Filet of Redgill", 13941, 13758 },
-        { 1319313, 225, "Plated Armorfish", 286153, 13890, { { 3713, 1 } } },
-        { 18238, 225, "Spotted Yellowtail", 13939, 4603 },
-        { 18240, 240, "Grilled Squid", 13942, 13755, { { 3713, 1 } }, true },
-        { 18242, 240, "Hot Smoked Bass", 13943, 13756, { { 2692, 2 } }, true },
-        { 18243, 250, "Nightfin Soup", 13945, 13759, { { 159, 1 } } },
-        { 18244, 250, "Poached Sunscale Salmon", 13946, 13760, nil, true },
-        { 18247, 275, "Baked Salmon", 13949, 13889, { { 3713, 1 } }, true },
-        { 18245, 275, "Lobster Stew", 13947, 13888, { { 159, 1 } }, true },
-        { 18246, 275, "Mightfish Steak", 13948, 13893, { { 2692, 1 }, { 3713, 1 } }, true },
-    }
-    local ingredientNames = {
-        [159] = "Refreshing Spring Water", [2678] = "Mild Spices",
-        [2692] = "Hot Spices", [3713] = "Soothing Spices",
-        [4603] = "Raw Spotted Yellowtail", [6289] = "Raw Longjaw Mud Snapper",
-        [5468] = "Soft Frenzy Flesh", [8959] = "Raw Spinefin Halibut",
-        [6291] = "Raw Brilliant Smallfish", [6303] = "Raw Slitherskin Mackerel",
-        [6308] = "Raw Bristle Whisker Catfish", [6317] = "Raw Loch Frenzy",
-        [6361] = "Raw Rainbow Fin Albacore", [6362] = "Raw Rockscale Cod",
-        [6522] = "Deviate Fish", [8365] = "Raw Mithril Head Trout",
-        [13754] = "Raw Glossy Mightfish", [13755] = "Raw Winter Squid",
-        [13756] = "Raw Summer Bass", [13758] = "Raw Redgill",
-        [13759] = "Raw Nightfin Snapper", [13760] = "Raw Sunscale Salmon",
-        [13888] = "Darkclaw Lobster", [13889] = "Raw Whitescale Salmon",
-        [13890] = "Raw Plated Armorfish", [13893] = "Large Raw Mightfish",
-        [21071] = "Raw Sagefish", [21153] = "Raw Greater Sagefish",
-        [251524] = "Whimsyfin",
-    }
-    local kelsey = { "Both factions: Kelsey Yance", "Old Port Authority, Booty Bay, Stranglethorn Vale (28.2, 74.4)" }
-    local gikkix = { "Both factions: Gikkix", "Steamwheedle Port, Tanaris (66.6, 22.1)" }
-    local feralas = {
-        "Alliance: Vivianna, Feathermoon Stronghold, Feralas",
-        "Horde: Sheendra Tallgrass, Camp Mojache, Feralas",
-    }
-    local recipeSources = {
-        [7751] = {
-            "Alliance: Tharynn Bouden, Goldshire, Elwynn Forest",
-            "Horde: Sewa Mistrunner, Thunder Bluff",
-        },
-        [7752] = {
-            "Alliance: Kriggon Talsone, Westfall (36.2, 90.1)",
-            "Horde: Zansoa, Sen'jin Village, Durotar",
-        },
-        [7753] = {
-            "Alliance: Tharynn Bouden, Goldshire, Elwynn Forest",
-            "Horde: Naal Mistrunner, Thunder Bluff",
-        },
-        [6415] = { "Alliance: Laird, Auberdine, Darkshore (36.8, 44.3)" },
-        [7754] = { "Alliance: Khara Deepwater, Thelsamar, Loch Modan (40.3, 39.3)" },
-        [7827] = {
-            "Alliance: Catherine Leland, Stormwind",
-            "Horde: Shankys, Orgrimmar",
-            "Both factions: Gritta Chumwater, Powderfuse Port, Riverglades (78.4, 55.0)",
-        },
-        [25704] = {
-            "Alliance: Erika Tate, Stormwind",
-            "Horde: Naal Mistrunner, Thunder Bluff, or Xen'to, Orgrimmar",
-        },
-        [8238] = { "Rare drop in The Barrens", "Examples: Witchwing Harpies and Venture Co. Peons" },
-        [1252566] = {
-            "Rare drop in Redridge Mountains",
-            "Examples: Greater Tarantulas, Redridge Thrashers, and Great Goretusks",
-        },
-        [7755] = {
-            "Alliance: Catherine Leland, Stormwind",
-            "Horde: Naal Mistrunner, Thunder Bluff",
-            "Both factions: Gritta Chumwater, Powderfuse Port, Riverglades (78.4, 55.0)",
-        },
-        [20916] = kelsey,
-        [7828] = kelsey,
-        [25954] = kelsey,
-        [1247741] = { "Reported source: Cooking trainer. Specific trainer unverified." },
-        [18239] = kelsey,
-        [18241] = kelsey,
-        [1319313] = { "World pickup: supply cart at Ariden's Camp, Deadwind Pass (52.4, 34.3)" },
-        [18238] = gikkix,
-        [18240] = gikkix,
-        [18242] = kelsey,
-        [18243] = gikkix,
-        [18244] = gikkix,
-        [18247] = feralas,
-        [18245] = feralas,
-        [18246] = feralas,
-    }
+    local recipes = addon.CookingRecipes
+    local ingredientNames = addon.CookingIngredientNames
+    local recipeSources = addon.CookingRecipeSources
 
     local function GetCookingSkill()
-        local cookingIndex = select(5, GetProfessions())
-        if cookingIndex then
-            local _, _, skill, maximum = GetProfessionInfo(cookingIndex)
-            return skill or 0, maximum or 0
-        end
-        local info = C_TradeSkillUI.GetProfessionInfoBySkillLineID(185)
-        return info and info.skillLevel or 0, info and info.maxSkillLevel or 0
+        return compat.GetCookingSkill()
     end
 
     local function GetRecipeKnowledge()
@@ -533,26 +399,9 @@ do
     end
 
     local function ScanCookingRecipes()
-        if not C_TradeSkillUI.IsTradeSkillReady() or C_TradeSkillUI.IsTradeSkillLinked()
-            or C_TradeSkillUI.IsTradeSkillGuild() or C_TradeSkillUI.IsTradeSkillGuildMember()
-            or C_TradeSkillUI.IsNPCCrafting() then
-            return
-        end
-        local info = C_TradeSkillUI.GetBaseProfessionInfo()
-        if not info or info.professionID ~= 185 then
-            return
-        end
         local known = GetRecipeKnowledge()
-        if not known then
-            return
-        end
-        for _, recipe in ipairs(recipes) do
-            local id = recipe[1]
-            local recipeInfo = C_TradeSkillUI.GetRecipeInfo(id)
-            if recipeInfo and type(recipeInfo.learned) == "boolean" then
-                known[id] = recipeInfo.learned
-                known.checked = true
-            end
+        if known then
+            compat.ScanCookingRecipes(recipes, known)
         end
     end
 
@@ -631,12 +480,15 @@ do
     nextPage:SetSize(60, 22)
     nextPage:SetText("Next")
     local pageText = MakeLine(cooking, "GameFontHighlightSmall", 146, -354, 54)
-    local openCooking = CreateFrame("Button", nil, cooking, "UIPanelButtonTemplate")
+    local openCooking = CreateFrame("Button", nil, cooking, "SecureActionButtonTemplate,UIPanelButtonTemplate")
     openCooking:SetPoint("TOPLEFT", 204, -347)
     openCooking:SetSize(114, 22)
     openCooking:SetText("Open Cooking")
-    openCooking:SetScript("OnClick", function()
-        C_TradeSkillUI.OpenTradeSkill(185)
+    openCooking:RegisterForClicks("LeftButtonUp")
+    openCooking:SetAttribute("useOnKeyDown", false)
+    compat.ConfigureCookingButton(openCooking)
+    openCooking:SetScript("PostClick", function()
+        compat.OpenCooking()
     end)
     openCooking:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
@@ -668,7 +520,7 @@ do
         for _, recipe in ipairs(recipes) do
             local id, required, name, scroll, fish, extras, oven = unpack(recipe, 1, 7)
             local learned = known[id]
-            if learned == nil and C_SpellBook.IsSpellKnown(id) then
+            if learned == nil and compat.IsSpellKnown(id) then
                 learned = true
             end
             local fishCount = CountItem(fish)
@@ -704,8 +556,8 @@ do
             return a.name < b.name
         end)
 
-        cookingSummary:SetText(skill > 0 and ("Cooking %d / %d  |  %d ready"):format(skill, maximum, ready)
-            or "Cooking untrained")
+        cookingSummary:SetText(skill > 0 and ("%s %d / %d  |  %d ready"):format(addon.CookingGuideName, skill, maximum, ready)
+            or (addon.CookingGuideName .. " untrained"))
         if skill == 0 then
             cookingHint:SetText("Learn Cooking from a trainer to get started.")
         elseif not known.checked then
@@ -1013,14 +865,16 @@ minimapButton:SetScript("OnDragStop", function(self)
     UpdateMinimapDrag()
 end)
 
-local function SetFishingEnabled(enabled)
+local function SetFishingEnabled(enabled, showStats)
     fishingEnabled = enabled
+    addon.SetFishingAudioVolume(uiState and uiState.fishingSoundVolume)
+    addon.SetFishingAudioEnabled(fishingEnabled and uiState ~= nil and uiState.boostFishingSound == true)
     waitingForRelease = false
     events:SetScript("OnUpdate", nil)
     castButton:SetAttribute("type", fishingEnabled and "spell" or nil)
     fishingButtonHidden = false
     RefreshFishingButton()
-    addon.ShowCatchStats(fishingEnabled)
+    addon.ShowCatchStats(fishingEnabled and showStats ~= false)
     minimapIcon:SetDesaturated(not fishingEnabled)
     SyncBindings()
 end
@@ -1031,7 +885,7 @@ function addon.RestoreUIState()
     addon.RestoreStatsPosition()
     local angle = type(uiState.minimapAngle) == "number" and uiState.minimapAngle or defaultMinimapAngle
     PositionMinimapButton(angle)
-    SetFishingEnabled(uiState.enabled ~= false)
+    SetFishingEnabled(uiState.enabled ~= false, uiState.showStatsOnStartup == true)
 end
 
 minimapButton:SetScript("OnClick", function(_, button)
@@ -1076,7 +930,9 @@ local instructions = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 instructions:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -12)
 instructions:SetPoint("RIGHT", panel, "RIGHT", -20, 0)
 instructions:SetJustifyH("LEFT")
-instructions:SetText("Equip a fishing pole and face the water. Click Cast Fishing, then click Reel In after the splash. The button enables WoW's Interact Key when used. Right-drag it to move it.")
+instructions:SetText(compat.isForever
+    and "Equip a fishing pole and face the water. Click Cast Fishing, then click Reel In after the splash. The button enables WoW's Interact Key when used. Right-drag it to move it."
+    or "Face the water and click Cast Fishing. Bind Cast / Reel In to a key below, then press it after the splash to reel in and again to cast. Right-drag the button to move it.")
 
 local bindingText = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 bindingText:SetPoint("TOPLEFT", instructions, "BOTTOMLEFT", 0, -24)
@@ -1100,13 +956,13 @@ local function CreateSettingCheckbox(label, variable)
     text:SetText(label)
 
     local function Refresh()
-        local setting = Settings.GetSetting(variable)
+        local setting = Settings and Settings.GetSetting and Settings.GetSetting(variable)
         checkbox:SetEnabled(setting ~= nil)
         checkbox:SetChecked(setting and setting:GetValue() or false)
     end
 
     checkbox:SetScript("OnClick", function(self)
-        local setting = Settings.GetSetting(variable)
+        local setting = Settings and Settings.GetSetting and Settings.GetSetting(variable)
         if setting then
             setting:SetValue(self:GetChecked())
         end
@@ -1120,8 +976,108 @@ interact:SetPoint("TOPLEFT", bindingHint, "BOTTOMLEFT", -4, -17)
 local autoLoot, RefreshAutoLoot = CreateSettingCheckbox("Auto Loot (optional)", "autoLootDefault")
 autoLoot:SetPoint("TOPLEFT", interact, "BOTTOMLEFT", 0, -3)
 
+local poolPins = CreateFrame("CheckButton", "BankFishingPoolPinsCheckbox", panel, "UICheckButtonTemplate")
+poolPins:SetPoint("TOPLEFT", autoLoot, "BOTTOMLEFT", 0, -3)
+local poolLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+poolLabel:SetPoint("LEFT", poolPins, "RIGHT", 4, 0)
+poolLabel:SetText("Show fishing pools")
+poolPins:SetScript("OnClick", function(self)
+    if uiState then
+        uiState.showFishingPools = self:GetChecked()
+        RefreshFishingButton()
+    end
+end)
+poolPins:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Fishing pool locations")
+    GameTooltip:AddLine("Show known pool and wreckage locations while a fishing pole is equipped.", 1, 1, 1, true)
+    GameTooltip:AddLine(compat.supportsPoolData and "A location can be empty when you visit."
+        or "The included locations cover Forever and pre-Cataclysm Azeroth.", 0.7, 0.85, 0.83, true)
+    GameTooltip:Show()
+end)
+poolPins:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
+local fishingAudio = CreateFrame("CheckButton", "BankFishingAudioCheckbox", panel, "UICheckButtonTemplate")
+fishingAudio:SetPoint("TOPLEFT", poolPins, "BOTTOMLEFT", 0, -3)
+local audioLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+audioLabel:SetPoint("LEFT", fishingAudio, "RIGHT", 4, 0)
+audioLabel:SetText("Louder fishing splash")
+
+local audioVolume = CreateFrame("Slider", "BankFishingAudioVolumeSlider", panel, "OptionsSliderTemplate")
+audioVolume:SetPoint("TOPLEFT", fishingAudio, "BOTTOMLEFT", 8, -16)
+audioVolume:SetSize(220, 16)
+audioVolume:SetMinMaxValues(0, 100)
+audioVolume:SetValueStep(5)
+audioVolume:SetObeyStepOnDrag(true)
+_G.BankFishingAudioVolumeSliderText:SetText("Fishing volume")
+_G.BankFishingAudioVolumeSliderLow:SetText("0%")
+_G.BankFishingAudioVolumeSliderHigh:SetText("100%")
+local audioVolumeText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+audioVolumeText:SetPoint("LEFT", audioVolume, "RIGHT", 12, 0)
+local refreshingAudioVolume = false
+
+local function RefreshAudioVolume()
+    local percent = addon.GetFishingAudioVolume() * 100
+    refreshingAudioVolume = true
+    audioVolume:SetValue(percent)
+    refreshingAudioVolume = false
+    audioVolumeText:SetText(("%d%%"):format(math.floor(percent + 0.5)))
+    audioVolume:SetEnabled(uiState ~= nil and uiState.boostFishingSound == true)
+end
+
+audioVolume:SetScript("OnValueChanged", function(_, value)
+    audioVolumeText:SetText(("%d%%"):format(math.floor(value + 0.5)))
+    if not refreshingAudioVolume and uiState then
+        uiState.fishingSoundVolume = value / 100
+        addon.SetFishingAudioVolume(uiState.fishingSoundVolume)
+    end
+end)
+fishingAudio:SetScript("OnClick", function(self)
+    if uiState then
+        uiState.boostFishingSound = self:GetChecked()
+        addon.SetFishingAudioEnabled(fishingEnabled and uiState.boostFishingSound == true)
+        addon.UpdateFishingAudio(fishingEnabled and IsFishing())
+        RefreshAudioVolume()
+    end
+end)
+fishingAudio:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Louder fishing splash")
+    local percent = math.floor(addon.GetFishingAudioVolume() * 100 + 0.5)
+    GameTooltip:AddLine(("Set Master and Effects volume to %d%% while fishing."):format(percent), 1, 1, 1, true)
+    GameTooltip:AddLine("Mute music and ambience until fishing ends, then restore your sound settings.", 0.7, 0.85, 0.83, true)
+    GameTooltip:AddLine("WoW provides the bite splash. Other sound effects are audible too.", 0.7, 0.85, 0.83, true)
+    GameTooltip:Show()
+end)
+fishingAudio:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
+local startupStats = CreateFrame("CheckButton", "BankFishingStartupStatsCheckbox", panel, "UICheckButtonTemplate")
+startupStats:SetPoint("TOPLEFT", audioVolume, "BOTTOMLEFT", -8, -28)
+local startupStatsLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+startupStatsLabel:SetPoint("LEFT", startupStats, "RIGHT", 4, 0)
+startupStatsLabel:SetText("Show catch stats at startup")
+startupStats:SetScript("OnClick", function(self)
+    if uiState then
+        uiState.showStatsOnStartup = self:GetChecked()
+    end
+end)
+startupStats:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Show catch stats at startup")
+    GameTooltip:AddLine("Open the catch window when you log in or reload the UI.", 1, 1, 1, true)
+    GameTooltip:AddLine("Catch tracking continues while the window is hidden.", 0.7, 0.85, 0.83, true)
+    GameTooltip:Show()
+end)
+startupStats:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
 local statsButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-statsButton:SetPoint("TOPLEFT", autoLoot, "BOTTOMLEFT", 4, -12)
+statsButton:SetPoint("TOPLEFT", startupStats, "BOTTOMLEFT", 4, -12)
 statsButton:SetSize(160, 24)
 statsButton:SetText("Toggle Catch Stats")
 statsButton:SetScript("OnClick", addon.ToggleStats)
@@ -1132,6 +1088,13 @@ local function Refresh()
     bindingText:SetText("Current binding: " .. display)
     RefreshInteract()
     RefreshAutoLoot()
+    poolPins:SetEnabled(uiState ~= nil and compat.supportsPoolData)
+    poolPins:SetChecked(compat.supportsPoolData and uiState ~= nil and uiState.showFishingPools ~= false)
+    fishingAudio:SetEnabled(uiState ~= nil)
+    fishingAudio:SetChecked(uiState ~= nil and uiState.boostFishingSound == true)
+    RefreshAudioVolume()
+    startupStats:SetEnabled(uiState ~= nil)
+    startupStats:SetChecked(uiState ~= nil and uiState.showStatsOnStartup == true)
 end
 
 panel:SetScript("OnShow", Refresh)
@@ -1167,14 +1130,21 @@ end
 do
     local lures = {
         { id = 6529, name = "Shiny Bauble" },
-        { id = 268880, name = '"Secret" Bait' },
+        { id = 268880, name = '"Secret" Bait', foreverOnly = true },
         { id = 6530, name = "Nightcrawlers" },
         { id = 6811, name = "Aquadynamic Fish Lens" },
-        { id = 291005, name = "Camper's Lure" },
+        { id = 291005, name = "Camper's Lure", foreverOnly = true },
         { id = 6532, name = "Bright Baubles" },
         { id = 7307, name = "Flesh Eating Worm" },
         { id = 6533, name = "Aquadynamic Fish Attractor" },
     }
+    if not compat.isForever then
+        for index = #lures, 1, -1 do
+            if lures[index].foreverOnly then
+                table.remove(lures, index)
+            end
+        end
+    end
     local lureButton = CreateFrame("Button", "BankFishingLureButton", fishingButton, "SecureActionButtonTemplate")
     lureButton:SetPoint("LEFT", fishingButton, "RIGHT", 6, 0)
     lureButton:SetSize(29, 29)
@@ -1201,34 +1171,42 @@ do
         return firstInBags or items[1]
     end
 
+    local legacyMenu
     local function ShowItemMenu(button, title, items, setting, refresh)
+        local function ChooseItem(id)
+            if uiState then
+                uiState[setting] = id
+                refresh()
+            end
+        end
+        if not MenuUtil or not MenuUtil.CreateContextMenu then
+            legacyMenu = legacyMenu or CreateFrame("Frame", nil, UIParent, "UIDropDownMenuTemplate")
+            local entries = { { text = title, isTitle = true, notCheckable = true } }
+            for _, item in ipairs(items) do
+                local id = item.id
+                local name = C_Item.GetItemNameByID(id) or item.name
+                entries[#entries + 1] = {
+                    text = ("%s (%d)"):format(name, C_Item.GetItemCount(id)),
+                    checked = SelectedItem(items, setting).id == id,
+                    func = function() ChooseItem(id) end,
+                }
+            end
+            EasyMenu(entries, legacyMenu, button, 0, 0, "MENU")
+            return
+        end
         MenuUtil.CreateContextMenu(button, function(_, menu)
             menu:CreateTitle(title)
             for _, item in ipairs(items) do
                 local name = C_Item.GetItemNameByID(item.id) or item.name
                 menu:CreateRadio(("%s (%d)"):format(name, C_Item.GetItemCount(item.id)), function(id)
                     return SelectedItem(items, setting).id == id
-                end, function(id)
-                    if uiState then
-                        uiState[setting] = id
-                        refresh()
-                    end
-                end, item.id)
+                end, ChooseItem, item.id)
             end
         end)
     end
 
     local function PoleLureTime()
-        if FishingPoleEquipped() then
-            local enchants = C_Item.GetWeaponEnchantInfo(Enum.WeaponSlot.MainHand)
-            for _, enchant in ipairs(enchants or {}) do
-                if enchant.hasEnchant and enchant.enchantType == Enum.ItemEnchantType.Temporary
-                    and enchant.timeLeft then
-                    return math.ceil(enchant.timeLeft / 1000)
-                end
-            end
-        end
-        return 0
+        return compat.PoleLureTime()
     end
 
     local function RefreshLure()
@@ -1263,7 +1241,7 @@ do
             ShowFishingError("No " .. lure.name .. " in your bags. Right-click to choose another lure.")
             return
         end
-        self:SetAttribute("macrotext1", ("/stopmacro [combat]\n/use item:%d\n/use %d"):format(lure.id, mainHandSlot))
+        self:SetAttribute("macrotext1", ("/stopmacro [combat]\n/use item:%d\n/use %d"):format(lure.id, compat.GetFishingPoleSlot()))
         self:SetAttribute("type1", "macro")
     end)
 
@@ -1329,6 +1307,11 @@ do
     kitCount:SetPoint("BOTTOMRIGHT", -2, 1)
 
     local function RefreshCampfire()
+        if not compat.isForever then
+            kitCount:SetText("")
+            campfireButton:GetNormalTexture():SetDesaturated(not compat.IsSpellKnown(818))
+            return
+        end
         local item = SelectedItem(campItems, "campfireKitID")
         local count = C_Item.GetItemCount(item.id)
         local texture = campfireButton:GetNormalTexture()
@@ -1346,6 +1329,11 @@ do
             ShowFishingError("Reel in before placing a camp item.")
             return
         end
+        if not compat.isForever then
+            self:SetAttribute("spell1", compat.GetSpellName(818))
+            self:SetAttribute("type1", "spell")
+            return
+        end
         local item = SelectedItem(campItems, "campfireKitID")
         if C_Item.GetItemCount(item.id) == 0 then
             ShowFishingError("No " .. item.name .. " in your bags.")
@@ -1360,13 +1348,19 @@ do
             if not InCombatLockdown() then
                 self:SetAttribute("type1", nil)
             end
-        elseif button == "RightButton" then
+        elseif button == "RightButton" and compat.isForever then
             ShowItemMenu(self, "Choose a camp item", campItems, "campfireKitID", RefreshCampfire)
         end
     end)
 
     campfireButton:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        if not compat.isForever then
+            GameTooltip:SetText("Campfire")
+            GameTooltip:AddLine("Left-click to build a campfire using Cooking.", 1, 1, 1)
+            GameTooltip:Show()
+            return
+        end
         GameTooltip:SetItemByID(SelectedItem(campItems, "campfireKitID").id)
         GameTooltip:AddLine(" ")
         GameTooltip:AddLine("Left-click to place the selected item.", 1, 1, 1)
@@ -1378,6 +1372,7 @@ do
     end)
     campfireButton:SetScript("OnShow", RefreshCampfire)
     campfireButton:RegisterEvent("PLAYER_LOGIN")
+    campfireButton:RegisterEvent("SPELLS_CHANGED")
     campfireButton:RegisterEvent("BAG_UPDATE_DELAYED")
     campfireButton:SetScript("OnEvent", function(self)
         if self:IsVisible() then

@@ -1,0 +1,13 @@
+## Interface: 38002
+## Title: Bait to Plate
+## Notes: One-button fishing, catch tracking, and a cooking guide that checks your skill and bag contents.
+## IconTexture: Interface\AddOns\BankFishing\Logo.tga
+## Version: 0.9.8
+## SavedVariables: BankFishingDB
+
+Compatibility.lua
+CookingRecipes.lua
+FishingAudio.lua
+PoolData.lua
+FishingPools.lua
+BankFishing.lua
