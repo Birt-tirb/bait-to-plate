@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.9.9 (25 November 2026)
+
+- The lure icon briefly glows when an observed active lure expires. Login, hidden controls and rod swaps do not trigger expiry reminders.
+- Added an optional saved Lure expiry sound setting, off by default, that plays once per expiry.
+- The selected lure's bag count turns amber at 1-3 remaining and red at zero. Applying a lure still requires a click.
+
+Settings
+
+- Right-click the minimap icon and enable Lure expiry sound for one short reminder when your active lure expires. It is off by default. The icon still glows with this setting off.
+- Louder fishing splash is a separate setting for the game's bite splash. Its saved Fishing volume slider runs from 0% to 100%, defaulting to 100%. While fishing, Master and Effects use that volume and music and ambience are muted. Previous sound settings return when fishing ends or is interrupted, combat begins, the addon switches off, or you log out or reload. Manual sound changes made during fishing are preserved, and other sound effects remain audible.
+
 ## v0.9.8 (21 November 2026)
 
 - Added 337 known fishing-pool and fishable-wreckage locations across 17 Azeroth zones. Use Show fishing pools in settings. Pins appear while a rod is equipped. Locations may be empty, and Zephras Isle has no included pins.

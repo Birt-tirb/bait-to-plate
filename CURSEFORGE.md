@@ -14,6 +14,8 @@ Classic and Forever controls appear with a pole equipped. Retail requires Fishin
 
 The small lure icon beside the fishing button shows your selected lure, how many you have, and its remaining time on your pole. **Right-click to choose a lure, then left-click to apply it.** Forever includes **Camper's Lure** and **"Secret" Bait**, alongside the supported standard pole lures.
 
+The icon briefly glows when an active lure expires. Its bag count turns **amber at 1-3 remaining** and **red at zero**, making it easier to spot when supplies are low. Applying another lure still needs your click.
+
 The campfire icon uses **right-click to choose, left-click to place**. Forever supports campfire kits, **Fish Bowl**, **Fishing Rack** and **Fishing Hut**. Fishing camp features need a nearby campfire. Other clients use their normal Cooking campfire.
 
 ## Your catch journal
@@ -30,11 +32,21 @@ Recipes you can cook, and recipes using fish you already have, appear first. Hov
 
 Use **Open Cooking** once per character to help verify learned recipes, then craft through WoW's Cooking window at the required station.
 
-## Pools and sound
+## Fishing pools
 
 Enable **Show fishing pools** for **337 known pool and fishable-wreckage locations across 17 Azeroth zones**. Pins appear with a pole equipped. These are known locations, so a pool may be empty. The included data covers Forever and pre-Cataclysm Azeroth, with **no Zephras Isle locations**. The overlay is disabled on Retail and post-Cataclysm clients because their map coordinates differ.
 
-Enable **Louder fishing splash**, then set **Fishing volume** from **0% to 100%**; the default is **100%**. While fishing, Master and Effects use that volume and music and ambience are muted. Other sound effects remain audible. The splash is the game's own sound.
+## Sound settings
+
+Right-click the minimap icon to open settings. The two sound options work independently.
+
+### Lure expiry sound
+
+Enable **Lure expiry sound** for one short reminder when your active lure expires. This saved setting is **off by default**. The lure icon still glows with sound off. Logging in, hiding the controls or swapping rods does not trigger an expiry reminder.
+
+### Louder fishing splash
+
+Enable **Louder fishing splash**, then set the saved **Fishing volume** slider from **0% to 100%**; the default is **100%**. While fishing, Master and Effects use that volume and music and ambience are muted. Other sound effects remain audible. The splash is the game's own sound.
 
 Your previous sound settings return when fishing ends or is interrupted, combat begins, you switch the addon off, log out or reload. Sound changes you make during fishing are preserved.
 
@@ -46,7 +58,7 @@ Your previous sound settings return when fishing ends or is interrupted, combat 
 - **Right-drag the fishing button** or **drag the journal** to reposition them. Positions and the on/off preference are saved.
 - Extract the **BankFishing** folder into your client's **Interface/AddOns** folder, enable Bait to Plate, then `/reload` after updates.
 
-## v0.9.8 compatibility
+## v0.9.9 compatibility
 
 | Client | Version |
 | --- | --- |

@@ -1076,8 +1076,29 @@ startupStats:SetScript("OnLeave", function()
     GameTooltip:Hide()
 end)
 
+local lureSound = CreateFrame("CheckButton", "BankFishingLureSoundCheckbox", panel, "UICheckButtonTemplate")
+lureSound:SetPoint("TOPLEFT", startupStats, "BOTTOMLEFT", 0, -3)
+local lureSoundLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+lureSoundLabel:SetPoint("LEFT", lureSound, "RIGHT", 4, 0)
+lureSoundLabel:SetText("Lure expiry sound")
+lureSound:SetScript("OnClick", function(self)
+    if uiState then
+        uiState.lureExpirySound = self:GetChecked()
+    end
+end)
+lureSound:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    GameTooltip:AddLine("Lure expiry sound")
+    GameTooltip:AddLine("Play one short reminder when an active lure expires on your equipped pole.", 1, 1, 1, true)
+    GameTooltip:AddLine("The lure icon briefly glows even when this sound is off.", 0.7, 0.85, 0.83, true)
+    GameTooltip:Show()
+end)
+lureSound:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+
 local statsButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-statsButton:SetPoint("TOPLEFT", startupStats, "BOTTOMLEFT", 4, -12)
+statsButton:SetPoint("TOPLEFT", lureSound, "BOTTOMLEFT", 4, -12)
 statsButton:SetSize(160, 24)
 statsButton:SetText("Toggle Catch Stats")
 statsButton:SetScript("OnClick", addon.ToggleStats)
@@ -1095,6 +1116,8 @@ local function Refresh()
     RefreshAudioVolume()
     startupStats:SetEnabled(uiState ~= nil)
     startupStats:SetChecked(uiState ~= nil and uiState.showStatsOnStartup == true)
+    lureSound:SetEnabled(uiState ~= nil)
+    lureSound:SetChecked(uiState ~= nil and uiState.lureExpirySound == true)
 end
 
 panel:SetScript("OnShow", Refresh)
@@ -1158,6 +1181,38 @@ do
     local timerText = lureButton:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     timerText:SetPoint("TOP", lureButton, "BOTTOM", 0, -2)
 
+    local expiryGlow = lureButton:CreateTexture("BankFishingLureExpiryGlow", "OVERLAY")
+    expiryGlow:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+    expiryGlow:SetBlendMode("ADD")
+    expiryGlow:SetVertexColor(1, 0.72, 0.15)
+    expiryGlow:SetPoint("CENTER")
+    expiryGlow:SetSize(48, 48)
+    expiryGlow:Hide()
+    local glowRemaining = 0
+    local lureExpiresAt
+    local observedPoleSlot
+
+    local function StopLureGlow()
+        glowRemaining = 0
+        expiryGlow:SetAlpha(1)
+        expiryGlow:Hide()
+    end
+
+    local function ResetLureReminder()
+        lureExpiresAt = nil
+        observedPoleSlot = nil
+        StopLureGlow()
+    end
+
+    local function LureExpired()
+        glowRemaining = 4
+        expiryGlow:SetAlpha(1)
+        expiryGlow:Show()
+        if uiState and uiState.lureExpirySound == true and PlaySound then
+            PlaySound(SOUNDKIT and SOUNDKIT.READY_CHECK or 8960)
+        end
+    end
+
     local function SelectedItem(items, setting)
         local firstInBags
         for _, item in ipairs(items) do
@@ -1212,11 +1267,38 @@ do
     local function RefreshLure()
         local lure = SelectedItem(lures, "lureID")
         local seconds = PoleLureTime()
+        local count = C_Item.GetItemCount(lure.id)
         local texture = lureButton:GetNormalTexture()
         texture:SetTexture(C_Item.GetItemIconByID(lure.id) or 134400)
         texture:SetDesaturated(seconds == 0)
-        countText:SetText(tostring(C_Item.GetItemCount(lure.id)))
+        countText:SetText(tostring(count))
+        if count == 0 then
+            countText:SetTextColor(1, 0.25, 0.2)
+        elseif count <= 3 then
+            countText:SetTextColor(1, 0.7, 0.15)
+        else
+            countText:SetTextColor(1, 1, 1)
+        end
         timerText:SetText(seconds > 0 and ("%d:%02d"):format(math.floor(seconds / 60), seconds % 60) or "--")
+
+        local poleSlot = compat.GetFishingPoleSlot()
+        if not fishingEnabled or not lureButton:IsVisible() or not poleSlot then
+            ResetLureReminder()
+            return
+        end
+        if poleSlot ~= observedPoleSlot then
+            ResetLureReminder()
+            observedPoleSlot = poleSlot
+        end
+        if seconds > 0 then
+            lureExpiresAt = GetTime() + seconds
+            StopLureGlow()
+        elseif lureExpiresAt and GetTime() >= lureExpiresAt then
+            -- Zero can also mean temporarily unavailable enchant data. Wait for
+            -- the observed deadline before treating a missing timer as expiry.
+            lureExpiresAt = nil
+            LureExpired()
+        end
     end
 
     lureButton:SetScript("PreClick", function(self, button)
@@ -1263,6 +1345,8 @@ do
         GameTooltip:AddLine("Left-click to apply the selected lure.", 1, 1, 1)
         GameTooltip:AddLine("Right-click to choose a lure.", 1, 1, 1)
         GameTooltip:AddLine("The timer shows the lure on your equipped pole.", 0.7, 0.85, 0.83)
+        GameTooltip:AddLine("Amber count: 3 or fewer lures. Red: none left.", 0.7, 0.85, 0.83)
+        GameTooltip:AddLine("The icon briefly glows when an active lure expires.", 0.7, 0.85, 0.83)
         GameTooltip:Show()
     end)
     lureButton:SetScript("OnLeave", function()
@@ -1271,17 +1355,33 @@ do
 
     local refreshElapsed = 0
     lureButton:SetScript("OnUpdate", function(_, elapsed)
+        if glowRemaining > 0 then
+            glowRemaining = math.max(0, glowRemaining - elapsed)
+            if glowRemaining == 0 then
+                StopLureGlow()
+            else
+                expiryGlow:SetAlpha(0.35 + 0.65 * (0.5 + 0.5 * math.sin((4 - glowRemaining) * math.pi * 3)))
+            end
+        end
         refreshElapsed = refreshElapsed + elapsed
         if refreshElapsed >= 1 then
             refreshElapsed = 0
             RefreshLure()
         end
     end)
-    lureButton:SetScript("OnShow", RefreshLure)
+    lureButton:SetScript("OnShow", function()
+        ResetLureReminder()
+        refreshElapsed = 0
+        RefreshLure()
+    end)
+    lureButton:SetScript("OnHide", ResetLureReminder)
     lureButton:RegisterEvent("PLAYER_LOGIN")
     lureButton:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
     lureButton:RegisterEvent("BAG_UPDATE_DELAYED")
-    lureButton:SetScript("OnEvent", function(self)
+    lureButton:SetScript("OnEvent", function(self, event, slot)
+        if event == "PLAYER_LOGIN" or (event == "PLAYER_EQUIPMENT_CHANGED" and (slot == 16 or slot == 28)) then
+            ResetLureReminder()
+        end
         if self:IsVisible() then
             RefreshLure()
         end

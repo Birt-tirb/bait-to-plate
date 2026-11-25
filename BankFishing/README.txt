@@ -1,4 +1,4 @@
-Bait to Plate 0.9.8
+Bait to Plate 0.9.9
 Release for current official WoW clients:
 Forever 1.60.1, Retail 12.1.5, Classic Era 1.15.9, TBC Anniversary 2.5.6,
 Mists of Pandaria Classic 5.5.4, and Wrath Titan Reforged 3.80.2.
@@ -56,6 +56,11 @@ and the remaining time on your equipped pole. Right-click to choose
 a lure, then left-click to apply it. Let an active lure expire before
 applying another. Forever includes Camper's Lure and Secret Bait.
 Other clients use the six supported standard pole lures.
+
+The lure icon briefly glows when an active lure expires. Enable Lure
+expiry sound in settings for one reminder sound per expiry (off by
+default). The selected lure's bag count turns amber at three or fewer
+and red at zero. A lure still needs a click to apply.
 
 The campfire icon shows how many of the selected camp item are in
 your bags. Right-click to choose a campfire kit, Fish Bowl, Fishing
